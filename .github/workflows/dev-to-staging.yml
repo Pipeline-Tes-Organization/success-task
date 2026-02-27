@@ -53,22 +53,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build & Push Docker Image (staging)
-        run: |
-          docker build -t myapp:staging .
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login \
-            -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          docker tag myapp:staging ${{ secrets.DOCKER_REGISTRY }}/myapp:staging
-          docker push ${{ secrets.DOCKER_REGISTRY }}/myapp:staging
+      # - name: Build & Push Docker Image (staging)
+      #   run: |
+      #     docker build -t myapp:staging .
+      #     echo "${{ secrets.DOCKER_PASSWORD }}" | docker login \
+      #       -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      #     docker tag myapp:staging ${{ secrets.DOCKER_REGISTRY }}/myapp:staging
+      #     docker push ${{ secrets.DOCKER_REGISTRY }}/myapp:staging
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to Staging
-        run: |
-          echo "Deploy step here..."
-          # ssh / kubectl / etc
+        # run: |
+        #   echo "Deploy step here..."
+        #   # ssh / kubectl / etc
 
   # SUCCESS: bulk testing → staging (atau done, sesuaikan)
   bulk-update-success:
@@ -77,14 +77,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Hit /api/bulk-task → update status
-        run: |
-          curl -s -w "\n%{http_code}" \
-            -X POST "${{ secrets.TASK_API_URL }}/api/bulk-task" \
-            -H "Authorization: Bearer ${{ secrets.TASK_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "ids": ${{ needs.extract-all-tasks.outputs.task_codes }}
-            }'
+        # run: |
+        #   curl -s -w "\n%{http_code}" \
+        #     -X POST "${{ secrets.TASK_API_URL }}/api/bulk-task" \
+        #     -H "Authorization: Bearer ${{ secrets.TASK_API_TOKEN }}" \
+        #     -H "Content-Type: application/json" \
+        #     -d '{
+        #       "ids": ${{ needs.extract-all-tasks.outputs.task_codes }}
+        #     }'
 
   # FAILED: bulk → fixing
   bulk-update-failed:
