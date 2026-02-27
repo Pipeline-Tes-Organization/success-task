@@ -46,7 +46,7 @@ jobs:
   # ← pastikan sejajar dengan extract-all-tasks (tidak ada indent lebih)
   build:
     needs: extract-all-tasks
-    if: needs.extract-all-tasks.outputs.has_tasks == 'true'
+    # Hapus if di sini, selalu jalan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +62,10 @@ jobs:
 
   bulk-update-success:
     needs: [extract-all-tasks, deploy]
-    if: success() && needs.extract-all-tasks.outputs.has_tasks == 'true'
+    # Ganti success() → eksplisit
+    if: |
+      needs.deploy.result == 'success' &&
+      needs.extract-all-tasks.outputs.has_tasks == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Hit /api/bulk-task → update status
@@ -75,7 +78,10 @@ jobs:
 
   bulk-update-failed:
     needs: [extract-all-tasks, build, deploy]
-    if: failure() && needs.extract-all-tasks.outputs.has_tasks == 'true'
+    # Ganti failure() → eksplisit
+    if: |
+      (needs.build.result == 'failure' || needs.deploy.result == 'failure') &&
+      needs.extract-all-tasks.outputs.has_tasks == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Detect failed job
