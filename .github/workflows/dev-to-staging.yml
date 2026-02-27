@@ -21,11 +21,13 @@ jobs:
         run: |
           git fetch origin staging
 
-          echo "=== Commit log ==="
+          echo "=== Commit log raw ==="
           git log origin/staging..HEAD --pretty=format:"%s"
-          echo "=== End log ==="
+          echo ""
+          echo "=== Test grep ==="
+          git log origin/staging..HEAD --pretty=format:"%s" | grep -oE '\[[A-Z]+-[0-9]+\]'
+          echo "=== End ==="
 
-          # Ganti grep -oP dengan grep -E + sed yang lebih compatible
           TASK_CODES=$(git log origin/staging..HEAD --pretty=format:"%s" \
             | grep -oE '\[[A-Z]+-[0-9]+\]' \
             | tr -d '[]' \
@@ -50,6 +52,7 @@ jobs:
             echo "task_codes=$JSON_ARRAY" >> $GITHUB_OUTPUT
             echo "Found tasks: $JSON_ARRAY"
           fi
+
 
 
   # ← pastikan sejajar dengan extract-all-tasks (tidak ada indent lebih)
