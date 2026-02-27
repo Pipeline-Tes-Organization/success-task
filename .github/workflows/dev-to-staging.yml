@@ -19,8 +19,10 @@ jobs:
       - name: Extract All Task Codes from commit log
         id: extract
         run: |
+          set +e   # ← jangan stop kalau ada error
+          
           git fetch origin staging
-
+          
           echo "=== Commit log raw ==="
           git log origin/staging..HEAD --pretty=format:"%s"
           echo ""
@@ -32,7 +34,7 @@ jobs:
             | grep -oE '\[[A-Z]+-[0-9]+\]' \
             | tr -d '[]' \
             | sort -u \
-            | tr '\n' ' ')
+            | tr '\n' ' ') || true
 
           echo "Raw task codes: '$TASK_CODES'"
 
@@ -52,8 +54,6 @@ jobs:
             echo "task_codes=$JSON_ARRAY" >> $GITHUB_OUTPUT
             echo "Found tasks: $JSON_ARRAY"
           fi
-
-
 
   # ← pastikan sejajar dengan extract-all-tasks (tidak ada indent lebih)
   build:
