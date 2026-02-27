@@ -19,21 +19,30 @@ jobs:
       - name: Extract All Task Codes from commit log
         id: extract
         run: |
+          set +e   # ← jangan stop kalau ada error
+          
           git fetch origin staging
+          
+          echo "=== Commit log raw ==="
+          git log origin/staging..HEAD --pretty=format:"%s"
+          echo ""
+          echo "=== Test grep ==="
+          git log origin/staging..HEAD --pretty=format:"%s" | grep -oE '\[[A-Z]+-[0-9]+\]'
+          echo "=== End ==="
 
-          # Baca semua commit message dari dev yang belum ada di staging
-          # Extract semua [DMA-XXX] pattern
           TASK_CODES=$(git log origin/staging..HEAD --pretty=format:"%s" \
-            | grep -oP '\[\K[A-Z]+-\d+(?=\])' \
+            | grep -oE '\[[A-Z]+-[0-9]+\]' \
+            | tr -d '[]' \
             | sort -u \
-            | tr '\n' ' ')
+            | tr '\n' ' ') || true
 
-          if [ -z "$TASK_CODES" ]; then
+          echo "Raw task codes: '$TASK_CODES'"
+
+          if [ -z "$(echo $TASK_CODES | tr -d ' ')" ]; then
             echo "No task codes found"
             echo "has_tasks=false" >> $GITHUB_OUTPUT
             echo "task_codes=" >> $GITHUB_OUTPUT
           else
-            # Format jadi JSON array: ["DMA-001","DMA-002"]
             JSON_ARRAY=$(echo "$TASK_CODES" \
               | tr ' ' '\n' \
               | grep -v '^$' \
@@ -46,50 +55,45 @@ jobs:
             echo "Found tasks: $JSON_ARRAY"
           fi
 
+  # ← pastikan sejajar dengan extract-all-tasks (tidak ada indent lebih)
   build:
     needs: extract-all-tasks
-    if: needs.extract-all-tasks.outputs.has_tasks == 'true'
+    # Hapus if di sini, selalu jalan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # - name: Build & Push Docker Image (staging)
-      #   run: |
-      #     docker build -t myapp:staging .
-      #     echo "${{ secrets.DOCKER_PASSWORD }}" | docker login \
-      #       -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-      #     docker tag myapp:staging ${{ secrets.DOCKER_REGISTRY }}/myapp:staging
-      #     docker push ${{ secrets.DOCKER_REGISTRY }}/myapp:staging
+      - name: Skip build (bypass mode)
+        run: echo "Build bypassed for testing"
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to Staging
-        # run: |
-        #   echo "Deploy step here..."
-        #   # ssh / kubectl / etc
+      - name: Skip deploy (bypass mode)
+        run: echo "Deploy bypassed for testing"
 
-  # SUCCESS: bulk testing → staging (atau done, sesuaikan)
   bulk-update-success:
     needs: [extract-all-tasks, deploy]
-    if: success() && needs.extract-all-tasks.outputs.has_tasks == 'true'
+    # Ganti success() → eksplisit
+    if: |
+      needs.deploy.result == 'success' &&
+      needs.extract-all-tasks.outputs.has_tasks == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Hit /api/bulk-task → update status
-        # run: |
-        #   curl -s -w "\n%{http_code}" \
-        #     -X POST "${{ secrets.TASK_API_URL }}/api/bulk-task" \
-        #     -H "Authorization: Bearer ${{ secrets.TASK_API_TOKEN }}" \
-        #     -H "Content-Type: application/json" \
-        #     -d '{
-        #       "ids": ${{ needs.extract-all-tasks.outputs.task_codes }}
-        #     }'
+        run: |
+          curl -s -w "\n%{http_code}" \
+            -X POST "${{ secrets.TASK_API_URL }}/api/bulk-task" \
+            -H "Authorization: Bearer ${{ secrets.TASK_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"ids": ${{ needs.extract-all-tasks.outputs.task_codes }}}'
 
-  # FAILED: bulk → fixing
   bulk-update-failed:
     needs: [extract-all-tasks, build, deploy]
-    if: failure() && needs.extract-all-tasks.outputs.has_tasks == 'true'
+    # Ganti failure() → eksplisit
+    if: |
+      (needs.build.result == 'failure' || needs.deploy.result == 'failure') &&
+      needs.extract-all-tasks.outputs.has_tasks == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Detect failed job
@@ -107,6 +111,4 @@ jobs:
             -X POST "${{ secrets.TASK_API_URL }}/api/bulk-task-failed" \
             -H "Authorization: Bearer ${{ secrets.TASK_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{
-              "ids": ${{ needs.extract-all-tasks.outputs.task_codes }}
-            }'
+            -d '{"ids": ${{ needs.extract-all-tasks.outputs.task_codes }}}'
