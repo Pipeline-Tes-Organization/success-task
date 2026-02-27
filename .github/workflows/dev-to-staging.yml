@@ -46,7 +46,7 @@ jobs:
             echo "Found tasks: $JSON_ARRAY"
           fi
 
-  build:
+    build:
     needs: extract-all-tasks
     if: needs.extract-all-tasks.outputs.has_tasks == 'true'
     runs-on: ubuntu-latest
@@ -62,6 +62,7 @@ jobs:
       - name: Skip deploy (bypass mode)
         run: echo "Deploy bypassed for testing"
 
+  # SUCCESS: bulk testing → staging (atau done, sesuaikan)
   bulk-update-success:
     needs: [extract-all-tasks, deploy]
     if: success() && needs.extract-all-tasks.outputs.has_tasks == 'true'
@@ -70,29 +71,13 @@ jobs:
       - name: Hit /api/bulk-task → update status
         run: echo "Bulk update bypassed for testing"
         # Uncomment ini kalau sudah siap:
-        # run: |
-        #   curl -s -w "\n%{http_code}" \
-        #     -X POST "${{ secrets.TASK_API_URL }}/api/bulk-task" \
-        #     -H "Authorization: Bearer ${{ secrets.TASK_API_TOKEN }}" \
-        #     -H "Content-Type: application/json" \
-        #     -d '{"ids": ${{ needs.extract-all-tasks.outputs.task_codes }}}'
+        run: |
+          curl -s -w "\n%{http_code}" \
+            -X POST "${{ secrets.TASK_API_URL }}/api/bulk-task" \
+            -H "Authorization: Bearer ${{ secrets.TASK_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"ids": ${{ needs.extract-all-tasks.outputs.task_codes }}}'
 
-
-  # SUCCESS: bulk testing → staging (atau done, sesuaikan)
-  bulk-update-success:
-    needs: [extract-all-tasks, deploy]
-    if: success() && needs.extract-all-tasks.outputs.has_tasks == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Hit /api/bulk-task → update status
-        # run: |
-        #   curl -s -w "\n%{http_code}" \
-        #     -X POST "${{ secrets.TASK_API_URL }}/api/bulk-task" \
-        #     -H "Authorization: Bearer ${{ secrets.TASK_API_TOKEN }}" \
-        #     -H "Content-Type: application/json" \
-        #     -d '{
-        #       "ids": ${{ needs.extract-all-tasks.outputs.task_codes }}
-        #     }'
 
   # FAILED: bulk → fixing
   bulk-update-failed:
