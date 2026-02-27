@@ -3,7 +3,9 @@ import React from 'react'
 const Lorem = () => {
   return (
     <div>
-        Lorem ipsum dolor sit amet consectetur, adipisicing elit. Architecto, repellat harum, odio veniam dolore cupiditate sapiente, officiis modi repellendus incidunt unde? Animi non suscipit rerum culpa! Amet alias unde tempore.
+        Lorem ipsum dolor sit, amet consectetur adipisicing elit. Dolores, quae.
+
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Suscipit optio porro animi expedita perferendis modi quos temporibus excepturi, quidem soluta.
     </div>
   )
 }
