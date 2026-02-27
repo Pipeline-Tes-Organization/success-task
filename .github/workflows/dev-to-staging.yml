@@ -21,8 +21,6 @@ jobs:
         run: |
           git fetch origin staging
 
-          # Baca semua commit message dari dev yang belum ada di staging
-          # Extract semua [DMA-XXX] pattern
           TASK_CODES=$(git log origin/staging..HEAD --pretty=format:"%s" \
             | grep -oP '\[\K[A-Z]+-\d+(?=\])' \
             | sort -u \
@@ -33,7 +31,6 @@ jobs:
             echo "has_tasks=false" >> $GITHUB_OUTPUT
             echo "task_codes=" >> $GITHUB_OUTPUT
           else
-            # Format jadi JSON array: ["DMA-001","DMA-002"]
             JSON_ARRAY=$(echo "$TASK_CODES" \
               | tr ' ' '\n' \
               | grep -v '^$' \
@@ -46,7 +43,8 @@ jobs:
             echo "Found tasks: $JSON_ARRAY"
           fi
 
-    build:
+  # ← pastikan sejajar dengan extract-all-tasks (tidak ada indent lebih)
+  build:
     needs: extract-all-tasks
     if: needs.extract-all-tasks.outputs.has_tasks == 'true'
     runs-on: ubuntu-latest
@@ -62,15 +60,12 @@ jobs:
       - name: Skip deploy (bypass mode)
         run: echo "Deploy bypassed for testing"
 
-  # SUCCESS: bulk testing → staging (atau done, sesuaikan)
   bulk-update-success:
     needs: [extract-all-tasks, deploy]
     if: success() && needs.extract-all-tasks.outputs.has_tasks == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Hit /api/bulk-task → update status
-        run: echo "Bulk update bypassed for testing"
-        # Uncomment ini kalau sudah siap:
         run: |
           curl -s -w "\n%{http_code}" \
             -X POST "${{ secrets.TASK_API_URL }}/api/bulk-task" \
@@ -78,8 +73,6 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"ids": ${{ needs.extract-all-tasks.outputs.task_codes }}}'
 
-
-  # FAILED: bulk → fixing
   bulk-update-failed:
     needs: [extract-all-tasks, build, deploy]
     if: failure() && needs.extract-all-tasks.outputs.has_tasks == 'true'
@@ -100,6 +93,4 @@ jobs:
             -X POST "${{ secrets.TASK_API_URL }}/api/bulk-task-failed" \
             -H "Authorization: Bearer ${{ secrets.TASK_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{
-              "ids": ${{ needs.extract-all-tasks.outputs.task_codes }}
-            }'
+            -d '{"ids": ${{ needs.extract-all-tasks.outputs.task_codes }}}'
