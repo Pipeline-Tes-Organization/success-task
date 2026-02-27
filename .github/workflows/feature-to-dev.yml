@@ -1,0 +1,65 @@
+name: Feature → Dev
+
+on:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  extract-task:
+    runs-on: ubuntu-latest
+    outputs:
+      task_code: ${{ steps.extract.outputs.task_code }}
+      has_task: ${{ steps.extract.outputs.has_task }}
+    steps:
+      - name: Extract Task Code from PR title
+        id: extract
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          TASK_CODE=$(echo "$TITLE" | grep -oP '\[\K[A-Z]+-\d+(?=\])')
+          if [ -z "$TASK_CODE" ]; then
+            echo "has_task=false" >> $GITHUB_OUTPUT
+            echo "task_code=" >> $GITHUB_OUTPUT
+          else
+            echo "has_task=true" >> $GITHUB_OUTPUT
+            echo "task_code=$TASK_CODE" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: extract-task
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker Image
+        run: docker build -t myapp:dev .
+
+  update-to-testing:
+    needs: [extract-task, build]
+    if: |
+      needs.build.result == 'success' &&
+      needs.extract-task.outputs.has_task == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update task → testing
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST "${{ secrets.TASK_API_URL }}/api/task/${{ needs.extract-task.outputs.task_code }}" \
+            -H "Authorization: Bearer ${{ secrets.TASK_API_TOKEN }}" \
+            -H "Content-Type: application/json")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          echo "Response: $(echo "$RESPONSE" | head -n-1)"
+          if [ "$HTTP_CODE" != "200" ]; then exit 1; fi
+
+  update-to-fixing:
+    needs: [extract-task, build]
+    if: |
+      needs.build.result == 'failure' &&
+      needs.extract-task.outputs.has_task == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update task → fixing
+        run: |
+          curl -s -w "\n%{http_code}" \
+            -X POST "${{ secrets.TASK_API_URL }}/api/task-failed/${{ needs.extract-task.outputs.task_code }}" \
+            -H "Authorization: Bearer ${{ secrets.TASK_API_TOKEN }}" \
+            -H "Content-Type: application/json"
