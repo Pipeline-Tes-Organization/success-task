@@ -19,8 +19,8 @@ function App() {
       </div>
       <h1>Ini Vite + React Testing Success</h1>
       <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+        <button onClick={() => setCount((count) => count + 100)}>
+          count is {count} Updated
         </button>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
