@@ -19,15 +19,15 @@ function App() {
       </div>
       <h1>Ini Vite + React Testing Success</h1>
       <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+        <button onClick={() => setCount((count) => count + 100)}>
+          count is {count} Updated again
         </button>
         <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
+          Edit <code>src/App.tsx</code> and save to test HMR Lorem ipsum dolor sit amet consectetur adipisicing elit. Laudantium quidem consequatur impedit rerum vero vitae quibusdam delectus numquam incidunt, nihil architecto quo molestias tenetur ut ullam magni nobis officiis pariatur.
         </p>
       </div>
       <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolorum sint nihil, magnam rem blanditiis, atque vero doloremque nisi doloribus, minima quam. Ab sit, ex accusantium aut rerum possimus consectetur laudantium?
       </p>
       <Lorem/>
     </>
